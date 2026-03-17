@@ -50,7 +50,16 @@ export function App() {
   )
   const [wifiHidden, setWifiHidden] = useState(false)
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false)
-  const [language, setLanguage] = useState<"es" | "en">("es")
+  const [language, setLanguage] = useState<"es" | "en">(() => {
+    if (typeof window === "undefined") return "es"
+    const stored = localStorage.getItem("qr-studio-lang")
+    return stored === "en" ? "en" : "es"
+  })
+
+  function setLanguageAndPersist(lang: "es" | "en") {
+    setLanguage(lang)
+    localStorage.setItem("qr-studio-lang", lang)
+  }
   const [feedbackName, setFeedbackName] = useState("")
   const [feedbackEmail, setFeedbackEmail] = useState("")
   const [feedbackMessage, setFeedbackMessage] = useState("")
@@ -192,6 +201,24 @@ export function App() {
     image.src = url
   }
 
+  async function handleCopyContent() {
+    if (isQrEmpty) return
+    try {
+      await navigator.clipboard.writeText(qrPayload)
+      toast.success(
+        language === "es"
+          ? "Contenido copiado al portapapeles."
+          : "Content copied to clipboard.",
+      )
+    } catch {
+      toast.error(
+        language === "es"
+          ? "No se pudo copiar."
+          : "Could not copy.",
+      )
+    }
+  }
+
   return (
     <div className="flex min-h-svh flex-col bg-background text-foreground">
       <header className="border-b border-border/60 px-4 py-4 sm:px-6">
@@ -215,7 +242,7 @@ export function App() {
             <div className="flex items-center">
               <Select
                 value={language}
-                onValueChange={(value) => setLanguage(value as "es" | "en")}
+                onValueChange={(value) => setLanguageAndPersist(value as "es" | "en")}
               >
                 <SelectTrigger className="h-8 w-[120px] rounded-full border-border/60 bg-muted/60 px-3 text-xs">
                   <SelectValue
@@ -633,6 +660,15 @@ export function App() {
                 </div>
 
                 <div className="flex flex-wrap justify-end gap-2">
+                  <Button
+                    variant="default"
+                    size="sm"
+                    type="button"
+                    disabled={isQrEmpty}
+                    onClick={handleCopyContent}
+                  >
+                    {language === "es" ? "Copiar" : "Copy"}
+                  </Button>
                   <Button
                     variant="outline"
                     size="sm"
