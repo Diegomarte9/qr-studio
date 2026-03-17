@@ -41,13 +41,15 @@ export function App() {
   const isValueEmpty = value.trim().length === 0
 
   const qrSize = sizeToPixels[size]
-  const qrRef = useRef<SVGSVGElement | null>(null)
+  const qrRef = useRef<HTMLDivElement | null>(null)
 
   function handleDownloadSvg() {
-    if (!qrRef.current) return
+    const container = qrRef.current
+    const svg = container?.querySelector("svg") as SVGSVGElement | null
+    if (!svg) return
 
     const serializer = new XMLSerializer()
-    const source = serializer.serializeToString(qrRef.current)
+    const source = serializer.serializeToString(svg)
     const blob = new Blob([source], { type: "image/svg+xml;charset=utf-8" })
     const url = URL.createObjectURL(blob)
 
@@ -61,10 +63,12 @@ export function App() {
   }
 
   function handleDownloadPng() {
-    if (!qrRef.current) return
+    const container = qrRef.current
+    const svg = container?.querySelector("svg") as SVGSVGElement | null
+    if (!svg) return
 
     const serializer = new XMLSerializer()
-    const source = serializer.serializeToString(qrRef.current)
+    const source = serializer.serializeToString(svg)
     const svgBlob = new Blob([source], { type: "image/svg+xml;charset=utf-8" })
     const url = URL.createObjectURL(svgBlob)
 
@@ -255,11 +259,11 @@ export function App() {
                   ) : (
                     <>
                       <div
+                        ref={qrRef}
                         className="rounded-lg bg-background p-3 shadow-sm"
                         style={{ backgroundColor: background }}
                       >
                         <QRCode
-                          ref={qrRef}
                           value={value}
                           size={qrSize}
                           fgColor={foreground}
