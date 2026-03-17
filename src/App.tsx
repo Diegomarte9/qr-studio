@@ -42,7 +42,20 @@ const sizeToPixels: Record<QrSize, number> = {
 export function App() {
   const [value, setValue] = useState("https://qr-studio-blond.vercel.app")
   const [notes, setNotes] = useState("")
-  const [mode, setMode] = useState<"url" | "wifi">("url")
+  const [mode, setMode] = useState<
+    "url" | "wifi" | "call" | "email" | "sms" | "whatsapp" | "vcard"
+  >("url")
+  const [callNumber, setCallNumber] = useState("")
+  const [emailTo, setEmailTo] = useState("")
+  const [emailSubject, setEmailSubject] = useState("")
+  const [emailBody, setEmailBody] = useState("")
+  const [smsNumber, setSmsNumber] = useState("")
+  const [smsBody, setSmsBody] = useState("")
+  const [waNumber, setWaNumber] = useState("")
+  const [waMessage, setWaMessage] = useState("")
+  const [vcardName, setVcardName] = useState("")
+  const [vcardPhone, setVcardPhone] = useState("")
+  const [vcardEmail, setVcardEmail] = useState("")
   const [wifiSsid, setWifiSsid] = useState("")
   const [wifiPassword, setWifiPassword] = useState("")
   const [wifiSecurity, setWifiSecurity] = useState<"WPA" | "WEP" | "nopass">(
@@ -73,11 +86,31 @@ export function App() {
       ? `WIFI:T:${wifiSecurity};S:${wifiSsid};${
           wifiSecurity !== "nopass" && wifiPassword ? `P:${wifiPassword};` : ""
         }${wifiHidden ? "H:true;" : ""};`
-      : value
+      : mode === "call"
+        ? `tel:${callNumber.trim().replace(/\s/g, "")}`
+        : mode === "email"
+          ? `mailto:${encodeURIComponent(emailTo.trim())}${emailSubject.trim() ? `?subject=${encodeURIComponent(emailSubject.trim())}` : ""}${emailBody.trim() ? `${emailSubject.trim() ? "&" : "?"}body=${encodeURIComponent(emailBody.trim())}` : ""}`
+          : mode === "sms"
+            ? `sms:${smsNumber.trim().replace(/\s/g, "")}${smsBody.trim() ? `?body=${encodeURIComponent(smsBody.trim())}` : ""}`
+            : mode === "whatsapp"
+              ? `https://wa.me/${waNumber.replace(/\D/g, "")}${waMessage.trim() ? `?text=${encodeURIComponent(waMessage.trim())}` : ""}`
+              : mode === "vcard"
+                  ? `BEGIN:VCARD\nVERSION:3.0\nFN:${vcardName.trim().replace(/\n/g, " ")}\n${vcardPhone.trim() ? `TEL:${vcardPhone.trim().replace(/\s/g, "")}\n` : ""}${vcardEmail.trim() ? `EMAIL:${vcardEmail.trim()}\n` : ""}END:VCARD`
+                  : value
   const isQrEmpty =
     mode === "wifi"
       ? !wifiSsid.trim() || (wifiSecurity !== "nopass" && !wifiPassword.trim())
-      : value.trim().length === 0
+      : mode === "call"
+        ? !callNumber.trim()
+        : mode === "email"
+          ? !emailTo.trim()
+          : mode === "sms"
+            ? !smsNumber.trim()
+            : mode === "whatsapp"
+              ? !waNumber.trim()
+              : mode === "vcard"
+                  ? !vcardName.trim()
+                  : value.trim().length === 0
   const qrRef = useRef<HTMLDivElement | null>(null)
 
   async function handleSubmitFeedback(event: React.FormEvent<HTMLFormElement>) {
@@ -383,28 +416,83 @@ export function App() {
                   <Label htmlFor="qr-value">
                     {language === "es" ? "Tipo de contenido" : "Content type"}
                   </Label>
-                  <div className="flex gap-2 text-[0.8rem]">
+                  <div className="flex flex-wrap gap-1.5 text-[0.75rem]">
                     <button
                       type="button"
                       onClick={() => setMode("url")}
-                      className={`rounded-full px-3 py-1 transition-colors ${
+                      className={`rounded-full px-2.5 py-1 transition-colors ${
                         mode === "url"
                           ? "bg-primary text-primary-foreground"
                           : "bg-muted text-muted-foreground hover:text-foreground"
                       }`}
                     >
-                      {language === "es" ? "Texto / URL" : "Text / URL"}
+                      {language === "es" ? "URL" : "URL"}
                     </button>
                     <button
                       type="button"
                       onClick={() => setMode("wifi")}
-                      className={`rounded-full px-3 py-1 transition-colors ${
+                      className={`rounded-full px-2.5 py-1 transition-colors ${
                         mode === "wifi"
                           ? "bg-primary text-primary-foreground"
                           : "bg-muted text-muted-foreground hover:text-foreground"
                       }`}
                     >
                       Wi‑Fi
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMode("call")}
+                      className={`rounded-full px-2.5 py-1 transition-colors ${
+                        mode === "call"
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-muted text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      {language === "es" ? "Llamada" : "Call"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMode("email")}
+                      className={`rounded-full px-2.5 py-1 transition-colors ${
+                        mode === "email"
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-muted text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      Email
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMode("sms")}
+                      className={`rounded-full px-2.5 py-1 transition-colors ${
+                        mode === "sms"
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-muted text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      SMS
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMode("whatsapp")}
+                      className={`rounded-full px-2.5 py-1 transition-colors ${
+                        mode === "whatsapp"
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-muted text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      WhatsApp
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMode("vcard")}
+                      className={`rounded-full px-2.5 py-1 transition-colors ${
+                        mode === "vcard"
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-muted text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      {language === "es" ? "Contacto" : "Contact"}
                     </button>
                   </div>
                 </div>
@@ -422,6 +510,242 @@ export function App() {
                       rows={3}
                       className="resize-none"
                     />
+                  </div>
+                ) : mode === "call" ? (
+                  <div className="space-y-2">
+                    <Label htmlFor="call-number">
+                      {language === "es"
+                        ? "Número de teléfono (código de país obligatorio)"
+                        : "Phone number (country code required)"}
+                    </Label>
+                    <Input
+                      id="call-number"
+                      type="tel"
+                      inputMode="numeric"
+                      value={callNumber}
+                      onChange={(event) => {
+                        const raw = event.target.value.replace(
+                          /[^\d+\s\-()]/g,
+                          "",
+                        )
+                        const digits = raw.replace(/\D/g, "")
+                        if (digits.length <= 15) setCallNumber(raw)
+                      }}
+                      placeholder="+1 809 555 1234"
+                      maxLength={25}
+                    />
+                    <p className="text-[0.7rem] text-muted-foreground">
+                      {language === "es"
+                        ? "Al escanear el QR se abrirá la app de llamadas con este número."
+                        : "Scanning the QR will open the phone app with this number."}
+                    </p>
+                  </div>
+                ) : mode === "email" ? (
+                  <div className="space-y-3">
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="email-to">
+                          {language === "es"
+                            ? "Correo electrónico"
+                            : "Email"}
+                        </Label>
+                        <Input
+                          id="email-to"
+                          type="email"
+                          value={emailTo}
+                          onChange={(event) => setEmailTo(event.target.value)}
+                          placeholder={
+                            language === "es"
+                              ? "Tu dirección de correo electrónico"
+                              : "Your email address"
+                          }
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="email-subject">
+                          {language === "es" ? "Asunto" : "Subject"}
+                        </Label>
+                        <Input
+                          id="email-subject"
+                          type="text"
+                          value={emailSubject}
+                          onChange={(event) =>
+                            setEmailSubject(event.target.value)
+                          }
+                          placeholder={
+                            language === "es"
+                              ? "Asunto del correo"
+                              : "Email subject"
+                          }
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="email-body">
+                        {language === "es" ? "Mensaje" : "Message"}
+                      </Label>
+                      <Textarea
+                        id="email-body"
+                        value={emailBody}
+                        onChange={(event) => setEmailBody(event.target.value)}
+                        placeholder={
+                          language === "es" ? "Mensaje" : "Message"
+                        }
+                        rows={4}
+                        className="resize-none"
+                      />
+                    </div>
+                  </div>
+                ) : mode === "sms" ? (
+                  <div className="space-y-3">
+                    <div className="space-y-2">
+                      <Label htmlFor="sms-number">
+                        {language === "es"
+                          ? "Número de teléfono (código de país obligatorio)"
+                          : "Phone number (country code required)"}
+                      </Label>
+                      <Input
+                        id="sms-number"
+                        type="tel"
+                        inputMode="numeric"
+                        value={smsNumber}
+                        onChange={(event) => {
+                          const raw = event.target.value.replace(
+                            /[^\d+\s\-()]/g,
+                            "",
+                          )
+                          const digits = raw.replace(/\D/g, "")
+                          if (digits.length <= 15) setSmsNumber(raw)
+                        }}
+                        placeholder="+1 809 555 1234"
+                        maxLength={25}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="sms-body">
+                        {language === "es"
+                          ? "Mensaje (opcional)"
+                          : "Message (optional)"}
+                      </Label>
+                      <Textarea
+                        id="sms-body"
+                        value={smsBody}
+                        onChange={(event) => setSmsBody(event.target.value)}
+                        placeholder={
+                          language === "es"
+                            ? "Texto del SMS..."
+                            : "SMS text..."
+                        }
+                        rows={2}
+                        className="resize-none"
+                      />
+                    </div>
+                  </div>
+                ) : mode === "whatsapp" ? (
+                  <div className="space-y-3">
+                    <div className="space-y-2">
+                      <Label htmlFor="wa-number">
+                        {language === "es"
+                          ? "Número (código de país obligatorio)"
+                          : "Number (country code required)"}
+                      </Label>
+                      <Input
+                        id="wa-number"
+                        type="tel"
+                        inputMode="numeric"
+                        value={waNumber}
+                        onChange={(event) => {
+                          const raw = event.target.value.replace(
+                            /[^\d+\s\-()]/g,
+                            "",
+                          )
+                          const digits = raw.replace(/\D/g, "")
+                          if (digits.length <= 15) setWaNumber(raw)
+                        }}
+                        placeholder="+1 809 555 1234"
+                        maxLength={25}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="wa-message">
+                        {language === "es"
+                          ? "Mensaje (opcional)"
+                          : "Message (optional)"}
+                      </Label>
+                      <Textarea
+                        id="wa-message"
+                        value={waMessage}
+                        onChange={(event) => setWaMessage(event.target.value)}
+                        placeholder={
+                          language === "es"
+                            ? "Mensaje para WhatsApp..."
+                            : "WhatsApp message..."
+                        }
+                        rows={2}
+                        className="resize-none"
+                      />
+                    </div>
+                  </div>
+                ) : mode === "vcard" ? (
+                  <div className="space-y-3">
+                    <div className="space-y-2">
+                      <Label htmlFor="vcard-name">
+                        {language === "es" ? "Nombre completo" : "Full name"}
+                      </Label>
+                      <Input
+                        id="vcard-name"
+                        type="text"
+                        value={vcardName}
+                        onChange={(event) =>
+                          setVcardName(event.target.value)
+                        }
+                        placeholder="Juan Pérez"
+                      />
+                    </div>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="vcard-phone">
+                          {language === "es"
+                            ? "Teléfono (opcional)"
+                            : "Phone (optional)"}
+                        </Label>
+                        <Input
+                          id="vcard-phone"
+                          type="tel"
+                          value={vcardPhone}
+                          onChange={(event) =>
+                            setVcardPhone(
+                              event.target.value.replace(
+                                /[^\d+\s\-()]/g,
+                                "",
+                              ),
+                            )
+                          }
+                          placeholder="+1 809 555 1234"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="vcard-email">
+                          {language === "es"
+                            ? "Email (opcional)"
+                            : "Email (optional)"}
+                        </Label>
+                        <Input
+                          id="vcard-email"
+                          type="email"
+                          value={vcardEmail}
+                          onChange={(event) =>
+                            setVcardEmail(event.target.value)
+                          }
+                          placeholder="juan@ejemplo.com"
+                        />
+                      </div>
+                    </div>
+                    <p className="text-[0.7rem] text-muted-foreground">
+                      {language === "es"
+                        ? "Al escanear se podrá añadir el contacto al teléfono."
+                        : "Scanning will allow adding the contact to the phone."}
+                    </p>
                   </div>
                 ) : (
                   <div className="grid gap-3 sm:grid-cols-2">
