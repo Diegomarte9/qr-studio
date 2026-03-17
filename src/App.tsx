@@ -12,6 +12,14 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -34,6 +42,10 @@ const sizeToPixels: Record<QrSize, number> = {
 export function App() {
   const [value, setValue] = useState("https://qr.studio")
   const [notes, setNotes] = useState("")
+  const [isFeedbackOpen, setIsFeedbackOpen] = useState(false)
+  const [feedbackName, setFeedbackName] = useState("")
+  const [feedbackEmail, setFeedbackEmail] = useState("")
+  const [feedbackMessage, setFeedbackMessage] = useState("")
   const [size, setSize] = useState<QrSize>("medium")
   const [foreground, setForeground] = useState("#020617") // slate-950
   const [background, setBackground] = useState("#f8fafc") // slate-50
@@ -42,6 +54,43 @@ export function App() {
 
   const qrSize = sizeToPixels[size]
   const qrRef = useRef<HTMLDivElement | null>(null)
+
+  async function handleSubmitFeedback(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+
+    if (!feedbackMessage.trim()) {
+      toast.error("Por favor escribe un mensaje de feedback.")
+      return
+    }
+
+    try {
+      const response = await fetch("https://formspree.io/f/xeerppjj", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          name: feedbackName,
+          email: feedbackEmail,
+          message: feedbackMessage,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error("Request failed")
+      }
+
+      setFeedbackName("")
+      setFeedbackEmail("")
+      setFeedbackMessage("")
+      setIsFeedbackOpen(false)
+      toast.success("Gracias por tu feedback.")
+    } catch (error) {
+      console.error(error)
+      toast.error("No se pudo enviar el feedback. Inténtalo de nuevo.")
+    }
+  }
 
   function handleDownloadSvg() {
     const container = qrRef.current
@@ -126,14 +175,68 @@ export function App() {
               <kbd className="rounded bg-muted px-1 text-[0.65rem]">d</kbd>{" "}
               para alternar tema.
             </p>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="h-8 rounded-full px-4 text-[0.75rem]"
-            >
-              Feedback
-            </Button>
+            <Dialog open={isFeedbackOpen} onOpenChange={setIsFeedbackOpen}>
+              <DialogTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-8 rounded-full px-4 text-[0.75rem]"
+                >
+                  Feedback
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Enviar feedback</DialogTitle>
+                  <DialogDescription>
+                    Cuéntame qué te parece QR Studio o qué te gustaría mejorar.
+                  </DialogDescription>
+                </DialogHeader>
+                <form className="space-y-4" onSubmit={handleSubmitFeedback}>
+                  <div className="space-y-2">
+                    <Label htmlFor="feedback-name">Nombre completo</Label>
+                    <Input
+                      id="feedback-name"
+                      placeholder="Tu nombre (opcional)"
+                      value={feedbackName}
+                      onChange={(event) => setFeedbackName(event.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="feedback-email">Correo electrónico</Label>
+                    <Input
+                      id="feedback-email"
+                      type="email"
+                      placeholder="tu-correo@ejemplo.com"
+                      value={feedbackEmail}
+                      onChange={(event) => setFeedbackEmail(event.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="feedback-message">Mensaje</Label>
+                    <Textarea
+                      id="feedback-message"
+                      placeholder="Escribe aquí tu feedback..."
+                      rows={4}
+                      value={feedbackMessage}
+                      onChange={(event) =>
+                        setFeedbackMessage(event.target.value)
+                      }
+                    />
+                  </div>
+                  <div className="flex justify-end gap-2">
+                    <Button
+                      type="submit"
+                      size="sm"
+                      className="px-4 text-[0.8rem]"
+                    >
+                      Enviar
+                    </Button>
+                  </div>
+                </form>
+              </DialogContent>
+            </Dialog>
             <a
               href="http://github.com/Diegomarte9"
               target="_blank"
