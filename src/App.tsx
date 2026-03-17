@@ -40,7 +40,7 @@ const sizeToPixels: Record<QrSize, number> = {
 }
 
 export function App() {
-  const [value, setValue] = useState("https://qr.studio")
+  const [value, setValue] = useState("https://qr-studio-blond.vercel.app")
   const [notes, setNotes] = useState("")
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false)
   const [language, setLanguage] = useState<"es" | "en">("es")
@@ -197,15 +197,17 @@ export function App() {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <div className="hidden items-center sm:flex">
+            <div className="flex items-center">
               <Select
                 value={language}
                 onValueChange={(value) => setLanguage(value as "es" | "en")}
               >
-                <SelectTrigger className="h-8 w-[125px] rounded-full border-border/60 bg-muted/60 px-3 text-xs">
-                  <SelectValue />
+                <SelectTrigger className="h-8 w-[120px] rounded-full border-border/60 bg-muted/60 px-3 text-xs">
+                  <SelectValue
+                    placeholder={language === "es" ? "Idioma" : "Language"}
+                  />
                 </SelectTrigger>
-                <SelectContent align="end">
+                <SelectContent align="end" className="min-w-[140px]">
                   <SelectItem value="es">
                     <span className="mr-1">🇩🇴</span>
                     <span>Español</span>
@@ -344,8 +346,8 @@ export function App() {
                   onChange={(event) => setValue(event.target.value)}
                   placeholder={
                     language === "es"
-                      ? "https://tu-link.com/campana"
-                      : "https://your-link.com/campaign"
+                      ? "https://qr-studio-blond.vercel.app/"
+                      : "https://qr-studio-blond.vercel.app/"
                   }
                   rows={3}
                   className="resize-none"
