@@ -12,6 +12,14 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -34,6 +42,11 @@ const sizeToPixels: Record<QrSize, number> = {
 export function App() {
   const [value, setValue] = useState("https://qr.studio")
   const [notes, setNotes] = useState("")
+  const [isFeedbackOpen, setIsFeedbackOpen] = useState(false)
+  const [language, setLanguage] = useState<"es" | "en">("es")
+  const [feedbackName, setFeedbackName] = useState("")
+  const [feedbackEmail, setFeedbackEmail] = useState("")
+  const [feedbackMessage, setFeedbackMessage] = useState("")
   const [size, setSize] = useState<QrSize>("medium")
   const [foreground, setForeground] = useState("#020617") // slate-950
   const [background, setBackground] = useState("#f8fafc") // slate-50
@@ -41,13 +54,64 @@ export function App() {
   const isValueEmpty = value.trim().length === 0
 
   const qrSize = sizeToPixels[size]
-  const qrRef = useRef<SVGSVGElement | null>(null)
+  const qrRef = useRef<HTMLDivElement | null>(null)
+
+  async function handleSubmitFeedback(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+
+    if (!feedbackMessage.trim()) {
+      toast.error(
+        language === "es"
+          ? "Por favor escribe un mensaje de feedback."
+          : "Please write a feedback message."
+      )
+      return
+    }
+
+    try {
+      const response = await fetch("https://formspree.io/f/xeerppjj", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          name: feedbackName,
+          email: feedbackEmail,
+          message: feedbackMessage,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error("Request failed")
+      }
+
+      setFeedbackName("")
+      setFeedbackEmail("")
+      setFeedbackMessage("")
+      setIsFeedbackOpen(false)
+      toast.success(
+        language === "es"
+          ? "Gracias por tu feedback."
+          : "Thanks for your feedback."
+      )
+    } catch (error) {
+      console.error(error)
+      toast.error(
+        language === "es"
+          ? "No se pudo enviar el feedback. Inténtalo de nuevo."
+          : "Feedback could not be sent. Please try again."
+      )
+    }
+  }
 
   function handleDownloadSvg() {
-    if (!qrRef.current) return
+    const container = qrRef.current
+    const svg = container?.querySelector("svg") as SVGSVGElement | null
+    if (!svg) return
 
     const serializer = new XMLSerializer()
-    const source = serializer.serializeToString(qrRef.current)
+    const source = serializer.serializeToString(svg)
     const blob = new Blob([source], { type: "image/svg+xml;charset=utf-8" })
     const url = URL.createObjectURL(blob)
 
@@ -57,14 +121,20 @@ export function App() {
     link.click()
 
     URL.revokeObjectURL(url)
-    toast.success("SVG descargado correctamente.")
+    toast.success(
+      language === "es"
+        ? "SVG descargado correctamente."
+        : "SVG downloaded successfully."
+    )
   }
 
   function handleDownloadPng() {
-    if (!qrRef.current) return
+    const container = qrRef.current
+    const svg = container?.querySelector("svg") as SVGSVGElement | null
+    if (!svg) return
 
     const serializer = new XMLSerializer()
-    const source = serializer.serializeToString(qrRef.current)
+    const source = serializer.serializeToString(svg)
     const svgBlob = new Blob([source], { type: "image/svg+xml;charset=utf-8" })
     const url = URL.createObjectURL(svgBlob)
 
@@ -88,12 +158,20 @@ export function App() {
       link.click()
 
       URL.revokeObjectURL(url)
-      toast.success("PNG descargado correctamente.")
+      toast.success(
+        language === "es"
+          ? "PNG descargado correctamente."
+          : "PNG downloaded successfully."
+      )
     }
 
     image.onerror = () => {
       URL.revokeObjectURL(url)
-      toast.error("No se pudo generar el PNG.")
+      toast.error(
+        language === "es"
+          ? "No se pudo generar el PNG."
+          : "PNG could not be generated."
+      )
     }
 
     image.src = url
@@ -112,24 +190,122 @@ export function App() {
                 QR Studio
               </h1>
               <p className="hidden text-[0.7rem] text-muted-foreground sm:block">
-                Genera códigos QR limpios para tus proyectos.
+                {language === "es"
+                  ? "Genera códigos QR limpios para tus proyectos."
+                  : "Generate clean QR codes for your projects."}
               </p>
             </div>
           </div>
           <div className="flex items-center gap-3">
+            <div className="hidden items-center sm:flex">
+              <Select
+                value={language}
+                onValueChange={(value) => setLanguage(value as "es" | "en")}
+              >
+                <SelectTrigger className="h-8 w-[125px] rounded-full border-border/60 bg-muted/60 px-3 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent align="end">
+                  <SelectItem value="es">
+                    <span className="mr-1">🇩🇴</span>
+                    <span>Español</span>
+                  </SelectItem>
+                  <SelectItem value="en">
+                    <span className="mr-1">🇺🇸</span>
+                    <span>English</span>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <p className="hidden text-[0.7rem] text-muted-foreground sm:inline">
-              Pulsa{" "}
+              {language === "es" ? "Pulsa" : "Press"}{" "}
               <kbd className="rounded bg-muted px-1 text-[0.65rem]">d</kbd>{" "}
-              para alternar tema.
+              {language === "es" ? "para alternar tema." : "to toggle theme."}
             </p>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="h-8 rounded-full px-4 text-[0.75rem]"
-            >
-              Feedback
-            </Button>
+            <Dialog open={isFeedbackOpen} onOpenChange={setIsFeedbackOpen}>
+              <DialogTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-8 rounded-full px-4 text-[0.75rem]"
+                >
+                  Feedback
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle>
+                    {language === "es" ? "Enviar feedback" : "Send feedback"}
+                  </DialogTitle>
+                  <DialogDescription>
+                    {language === "es"
+                      ? "Cuéntame qué te parece QR Studio o qué te gustaría mejorar."
+                      : "Tell me what you think about QR Studio or what you’d improve."}
+                  </DialogDescription>
+                </DialogHeader>
+                <form className="space-y-4" onSubmit={handleSubmitFeedback}>
+                  <div className="space-y-2">
+                    <Label htmlFor="feedback-name">
+                      {language === "es" ? "Nombre completo" : "Full name"}
+                    </Label>
+                    <Input
+                      id="feedback-name"
+                      placeholder={
+                        language === "es"
+                          ? "Tu nombre (opcional)"
+                          : "Your name (optional)"
+                      }
+                      value={feedbackName}
+                      onChange={(event) => setFeedbackName(event.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="feedback-email">
+                      {language === "es" ? "Correo electrónico" : "Email"}
+                    </Label>
+                    <Input
+                      id="feedback-email"
+                      type="email"
+                      placeholder={
+                        language === "es"
+                          ? "tu-correo@ejemplo.com"
+                          : "you@example.com"
+                      }
+                      value={feedbackEmail}
+                      onChange={(event) => setFeedbackEmail(event.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="feedback-message">
+                      {language === "es" ? "Mensaje" : "Message"}
+                    </Label>
+                    <Textarea
+                      id="feedback-message"
+                      placeholder={
+                        language === "es"
+                          ? "Escribe aquí tu feedback..."
+                          : "Write your feedback here..."
+                      }
+                      rows={4}
+                      value={feedbackMessage}
+                      onChange={(event) =>
+                        setFeedbackMessage(event.target.value)
+                      }
+                    />
+                  </div>
+                  <div className="flex justify-end gap-2">
+                    <Button
+                      type="submit"
+                      size="sm"
+                      className="px-4 text-[0.8rem]"
+                    >
+                      {language === "es" ? "Enviar" : "Send"}
+                    </Button>
+                  </div>
+                </form>
+              </DialogContent>
+            </Dialog>
             <a
               href="http://github.com/Diegomarte9"
               target="_blank"
@@ -148,19 +324,29 @@ export function App() {
           <div className="grid gap-6 md:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
           <Card className="border-border/60">
             <CardHeader>
-              <CardTitle className="text-base">Contenido del QR</CardTitle>
+              <CardTitle className="text-base">
+                {language === "es" ? "Contenido del QR" : "QR content"}
+              </CardTitle>
               <CardDescription>
-                Define el destino y algunos detalles visuales básicos.
+                {language === "es"
+                  ? "Define el destino y algunos detalles visuales básicos."
+                  : "Define the target and a few visual details."}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-5">
               <div className="space-y-2">
-                <Label htmlFor="qr-value">Texto o URL</Label>
+                <Label htmlFor="qr-value">
+                  {language === "es" ? "Texto o URL" : "Text or URL"}
+                </Label>
                 <Textarea
                   id="qr-value"
                   value={value}
                   onChange={(event) => setValue(event.target.value)}
-                  placeholder="https://tu-link.com/campana"
+                  placeholder={
+                    language === "es"
+                      ? "https://tu-link.com/campana"
+                      : "https://your-link.com/campaign"
+                  }
                   rows={3}
                   className="resize-none"
                 />
@@ -168,24 +354,42 @@ export function App() {
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="qr-size">Tamaño</Label>
+                  <Label htmlFor="qr-size">
+                    {language === "es" ? "Tamaño" : "Size"}
+                  </Label>
                   <Select
                     value={size}
                     onValueChange={(next) => setSize(next as QrSize)}
                   >
                     <SelectTrigger id="qr-size" className="w-full">
-                      <SelectValue placeholder="Selecciona un tamaño" />
+                      <SelectValue
+                        placeholder={
+                          language === "es"
+                            ? "Selecciona un tamaño"
+                            : "Select a size"
+                        }
+                      />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="small">Pequeño</SelectItem>
-                      <SelectItem value="medium">Mediano</SelectItem>
-                      <SelectItem value="large">Grande</SelectItem>
+                      <SelectItem value="small">
+                        {language === "es" ? "Pequeño" : "Small"}
+                      </SelectItem>
+                      <SelectItem value="medium">
+                        {language === "es" ? "Mediano" : "Medium"}
+                      </SelectItem>
+                      <SelectItem value="large">
+                        {language === "es" ? "Grande" : "Large"}
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="qr-foreground">Color principal</Label>
+                  <Label htmlFor="qr-foreground">
+                    {language === "es"
+                      ? "Color principal"
+                      : "Primary color"}
+                  </Label>
                   <div className="flex items-center gap-2">
                     <Input
                       id="qr-foreground"
@@ -206,7 +410,9 @@ export function App() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="qr-background">Fondo</Label>
+                <Label htmlFor="qr-background">
+                  {language === "es" ? "Fondo" : "Background"}
+                </Label>
                 <div className="flex w-full items-center gap-2">
                   <Input
                     id="qr-background"
@@ -227,12 +433,20 @@ export function App() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="qr-notes">Notas internas (opcional)</Label>
+                <Label htmlFor="qr-notes">
+                  {language === "es"
+                    ? "Notas internas (opcional)"
+                    : "Internal notes (optional)"}
+                </Label>
                 <Input
                   id="qr-notes"
                   value={notes}
                   onChange={(event) => setNotes(event.target.value)}
-                  placeholder="Landing verano, campaña newsletter, etc."
+                  placeholder={
+                    language === "es"
+                      ? "Landing verano, campaña newsletter, etc."
+                      : "Summer landing, newsletter campaign, etc."
+                  }
                 />
               </div>
             </CardContent>
@@ -240,9 +454,13 @@ export function App() {
 
           <Card className="border-border/60">
             <CardHeader>
-              <CardTitle className="text-base">Vista previa</CardTitle>
+              <CardTitle className="text-base">
+                {language === "es" ? "Vista previa" : "Preview"}
+              </CardTitle>
               <CardDescription>
-                Previsualiza el resultado antes de descargar o compartir.
+                {language === "es"
+                  ? "Previsualiza el resultado antes de descargar o compartir."
+                  : "Preview the result before downloading or sharing."}
               </CardDescription>
             </CardHeader>
             <CardContent className="flex h-full flex-col justify-between gap-4">
@@ -250,16 +468,18 @@ export function App() {
                 <div className="inline-flex flex-col items-center gap-3 rounded-xl border border-dashed border-border/70 bg-muted/40 px-6 py-5">
                   {isValueEmpty ? (
                     <p className="max-w-xs text-center text-xs text-muted-foreground">
-                      Escribe un texto o URL para generar tu código QR.
+                      {language === "es"
+                        ? "Escribe un texto o URL para generar tu código QR."
+                        : "Type some text or a URL to generate your QR code."}
                     </p>
                   ) : (
                     <>
                       <div
+                        ref={qrRef}
                         className="rounded-lg bg-background p-3 shadow-sm"
                         style={{ backgroundColor: background }}
                       >
                         <QRCode
-                          ref={qrRef}
                           value={value}
                           size={qrSize}
                           fgColor={foreground}
@@ -267,8 +487,9 @@ export function App() {
                         />
                       </div>
                       <p className="max-w-xs text-center text-[0.7rem] text-muted-foreground">
-                        Este es un preview en vivo. Podrás añadir descarga e
-                        historial en el siguiente paso.
+                        {language === "es"
+                          ? "Este es un preview en vivo. Podrás añadir descarga e historial en el siguiente paso."
+                          : "This is a live preview. You can add download and history features in the next step."}
                       </p>
                     </>
                   )}
@@ -278,14 +499,17 @@ export function App() {
               <div className="space-y-3 border-t border-border/60 pt-3">
                 <div className="flex flex-wrap items-center justify-between gap-2 text-[0.7rem] text-muted-foreground">
                   <span>
-                    Tamaño: <span className="font-medium">{qrSize}px</span>
+                    {language === "es" ? "Tamaño:" : "Size:"}{" "}
+                    <span className="font-medium">{qrSize}px</span>
                   </span>
                   <span className="flex gap-2">
                     <span>
-                      Color: <span className="font-mono">{foreground}</span>
+                      {language === "es" ? "Color:" : "Color:"}{" "}
+                      <span className="font-mono">{foreground}</span>
                     </span>
                     <span>
-                      Fondo: <span className="font-mono">{background}</span>
+                      {language === "es" ? "Fondo:" : "Background:"}{" "}
+                      <span className="font-mono">{background}</span>
                     </span>
                   </span>
                 </div>
@@ -298,7 +522,7 @@ export function App() {
                     disabled={isValueEmpty}
                     onClick={handleDownloadSvg}
                   >
-                    Descargar SVG
+                    {language === "es" ? "Descargar SVG" : "Download SVG"}
                   </Button>
                   <Button
                     variant="default"
@@ -307,7 +531,7 @@ export function App() {
                     disabled={isValueEmpty}
                     onClick={handleDownloadPng}
                   >
-                    Descargar PNG
+                    {language === "es" ? "Descargar PNG" : "Download PNG"}
                   </Button>
                 </div>
               </div>
@@ -320,7 +544,7 @@ export function App() {
       <footer className="border-t border-border/60 px-4 py-6 text-xs text-muted-foreground sm:px-6 sm:py-7">
         <div className="mx-auto flex max-w-5xl justify-center">
           <p className="flex flex-wrap items-center gap-1 text-[0.8rem] sm:text-sm">
-            Hecho en 🇩🇴 por{" "}
+            {language === "es" ? "Hecho en 🇩🇴 por " : "Made in 🇩🇴 by "}
             <a
               href="http://github.com/Diegomarte9"
               target="_blank"
