@@ -42,6 +42,13 @@ const sizeToPixels: Record<QrSize, number> = {
 export function App() {
   const [value, setValue] = useState("https://qr-studio-blond.vercel.app")
   const [notes, setNotes] = useState("")
+  const [mode, setMode] = useState<"url" | "wifi">("url")
+  const [wifiSsid, setWifiSsid] = useState("")
+  const [wifiPassword, setWifiPassword] = useState("")
+  const [wifiSecurity, setWifiSecurity] = useState<"WPA" | "WEP" | "nopass">(
+    "WPA",
+  )
+  const [wifiHidden, setWifiHidden] = useState(false)
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false)
   const [language, setLanguage] = useState<"es" | "en">("es")
   const [feedbackName, setFeedbackName] = useState("")
@@ -51,9 +58,17 @@ export function App() {
   const [foreground, setForeground] = useState("#020617") // slate-950
   const [background, setBackground] = useState("#f8fafc") // slate-50
 
-  const isValueEmpty = value.trim().length === 0
-
   const qrSize = sizeToPixels[size]
+  const qrPayload =
+    mode === "wifi"
+      ? `WIFI:T:${wifiSecurity};S:${wifiSsid};${
+          wifiSecurity !== "nopass" && wifiPassword ? `P:${wifiPassword};` : ""
+        }${wifiHidden ? "H:true;" : ""};`
+      : value
+  const isQrEmpty =
+    mode === "wifi"
+      ? !wifiSsid.trim() || (wifiSecurity !== "nopass" && !wifiPassword.trim())
+      : value.trim().length === 0
   const qrRef = useRef<HTMLDivElement | null>(null)
 
   async function handleSubmitFeedback(event: React.FormEvent<HTMLFormElement>) {
@@ -336,22 +351,123 @@ export function App() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-5">
-              <div className="space-y-2">
-                <Label htmlFor="qr-value">
-                  {language === "es" ? "Texto o URL" : "Text or URL"}
-                </Label>
-                <Textarea
-                  id="qr-value"
-                  value={value}
-                  onChange={(event) => setValue(event.target.value)}
-                  placeholder={
-                    language === "es"
-                      ? "https://qr-studio-blond.vercel.app/"
-                      : "https://qr-studio-blond.vercel.app/"
-                  }
-                  rows={3}
-                  className="resize-none"
-                />
+              <div className="space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <Label htmlFor="qr-value">
+                    {language === "es" ? "Tipo de contenido" : "Content type"}
+                  </Label>
+                  <div className="flex gap-2 text-[0.8rem]">
+                    <button
+                      type="button"
+                      onClick={() => setMode("url")}
+                      className={`rounded-full px-3 py-1 transition-colors ${
+                        mode === "url"
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-muted text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      {language === "es" ? "Texto / URL" : "Text / URL"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMode("wifi")}
+                      className={`rounded-full px-3 py-1 transition-colors ${
+                        mode === "wifi"
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-muted text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      Wi‑Fi
+                    </button>
+                  </div>
+                </div>
+
+                {mode === "url" ? (
+                  <div className="space-y-2">
+                    <Label htmlFor="qr-value">
+                      {language === "es" ? "Texto o URL" : "Text or URL"}
+                    </Label>
+                    <Textarea
+                      id="qr-value"
+                      value={value}
+                      onChange={(event) => setValue(event.target.value)}
+                      placeholder="https://qr-studio-blond.vercel.app"
+                      rows={3}
+                      className="resize-none"
+                    />
+                  </div>
+                ) : (
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="wifi-ssid">
+                        {language === "es" ? "Nombre de red (SSID)" : "SSID"}
+                      </Label>
+                      <Input
+                        id="wifi-ssid"
+                        value={wifiSsid}
+                        onChange={(event) => setWifiSsid(event.target.value)}
+                        placeholder={
+                          language === "es" ? "MiWifiCasa" : "MyHomeWifi"
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="wifi-security">
+                        {language === "es" ? "Seguridad" : "Security"}
+                      </Label>
+                      <Select
+                        value={wifiSecurity}
+                        onValueChange={(next) =>
+                          setWifiSecurity(next as "WPA" | "WEP" | "nopass")
+                        }
+                      >
+                        <SelectTrigger id="wifi-security" className="w-full">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="WPA">WPA/WPA2</SelectItem>
+                          <SelectItem value="WEP">WEP</SelectItem>
+                          <SelectItem value="nopass">
+                            {language === "es"
+                              ? "Sin contraseña"
+                              : "No password"}
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {wifiSecurity !== "nopass" && (
+                      <div className="space-y-2 sm:col-span-2">
+                        <Label htmlFor="wifi-password">
+                          {language === "es" ? "Contraseña" : "Password"}
+                        </Label>
+                        <Input
+                          id="wifi-password"
+                          type="password"
+                          value={wifiPassword}
+                          onChange={(event) =>
+                            setWifiPassword(event.target.value)
+                          }
+                          placeholder="••••••••"
+                        />
+                      </div>
+                    )}
+                    <label className="flex items-center gap-2 text-xs text-muted-foreground sm:col-span-2">
+                      <input
+                        type="checkbox"
+                        checked={wifiHidden}
+                        onChange={(event) =>
+                          setWifiHidden(event.target.checked)
+                        }
+                        className="h-3 w-3 rounded border border-border accent-primary"
+                      />
+                      <span>
+                        {language === "es"
+                          ? "La red está oculta"
+                          : "Network is hidden"}
+                      </span>
+                    </label>
+                  </div>
+                )}
               </div>
 
               <div className="grid gap-4 sm:grid-cols-2">
@@ -468,7 +584,7 @@ export function App() {
             <CardContent className="flex h-full flex-col justify-between gap-4">
               <div className="flex flex-1 items-center justify-center">
                 <div className="inline-flex flex-col items-center gap-3 rounded-xl border border-dashed border-border/70 bg-muted/40 px-6 py-5">
-                  {isValueEmpty ? (
+                  {isQrEmpty ? (
                     <p className="max-w-xs text-center text-xs text-muted-foreground">
                       {language === "es"
                         ? "Escribe un texto o URL para generar tu código QR."
@@ -482,7 +598,7 @@ export function App() {
                         style={{ backgroundColor: background }}
                       >
                         <QRCode
-                          value={value}
+                          value={qrPayload}
                           size={qrSize}
                           fgColor={foreground}
                           bgColor={background}
@@ -521,7 +637,7 @@ export function App() {
                     variant="outline"
                     size="sm"
                     type="button"
-                    disabled={isValueEmpty}
+                    disabled={isQrEmpty}
                     onClick={handleDownloadSvg}
                   >
                     {language === "es" ? "Descargar SVG" : "Download SVG"}
@@ -530,7 +646,7 @@ export function App() {
                     variant="default"
                     size="sm"
                     type="button"
-                    disabled={isValueEmpty}
+                    disabled={isQrEmpty}
                     onClick={handleDownloadPng}
                   >
                     {language === "es" ? "Descargar PNG" : "Download PNG"}
